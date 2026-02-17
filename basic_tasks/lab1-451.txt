@@ -83,8 +83,7 @@ void loop() {
 
 
 ** Question 2:
-
-
+	Technically, I believe it would be possible to just measure the points where the frequency changes, since that would be the time that the scheduler changed tasks. However, I'm not sure that it would be easy to measure, and I don't know that I can guarantee that the scheduler won't just switch after turning on or off an LED, which I wouldn't be able to measure. Therefore, I plan on setting one LED to turn on for a short duration, then call taskYIELD(), with the other LED running the task of oscillating constantly, so that it is easier to tell when the task switches.
 
 ** Question 3:
 
