@@ -85,9 +85,58 @@ void loop() {
 ** Question 2:
 	Technically, I believe it would be possible to just measure the points where the frequency changes, since that would be the time that the scheduler changed tasks. However, I'm not sure that it would be easy to measure, and I don't know that I can guarantee that the scheduler won't just switch after turning on or off an LED, which I wouldn't be able to measure. Therefore, I plan on setting one LED to turn on for a short duration, then call taskYIELD(), with the other LED running the task of oscillating constantly, so that it is easier to tell when the task switches.
 
+	It turned out that the Arduino loop() task was also interfering, and I struggled to get a delay small enough to measure the slice. This is when I found the author's task_yield code, which worked well, I believe due to the loop() task deleting itself, something I didn't think of. This new code operates on the structure that I had originally planned, where one task drives the GPIO pin high, then yields, then the second task drives the pin low, then repeat. Because of the taskYIELD() call, every rising edge of the pin will indicate one time slice.
+
 ** Question 3:
+// task_yield.ino 
+// MIT License (see file LICENSE)
 
+#define GPIO  12
 
+static void gpio_on(void *argp) {
+  for (;;) {
+    for ( short x=0; x<1000; ++x )    // write HIGH for 1000 cycles, then yield
+      digitalWrite(GPIO,HIGH);
+    taskYIELD();
+  }
+}
+
+static void gpio_off(void *argp) {
+  for (;;) {
+    digitalWrite(GPIO,LOW);           // write LOW
+  }
+}
+
+void setup() {
+  int app_cpu = xPortGetCoreID();
+
+  pinMode(GPIO,OUTPUT);
+  delay(1000);
+  printf("Setup started..\n");
+
+  xTaskCreatePinnedToCore(
+    gpio_on,
+    "gpio_on",
+    2048,
+    nullptr,
+    1,
+    nullptr,
+    app_cpu
+  );
+  xTaskCreatePinnedToCore(
+    gpio_off,
+    "gpio_off",
+    2048,
+    nullptr,
+    1,
+    nullptr,
+    app_cpu
+  );
+}
+
+void loop() {
+  vTaskDelete(xTaskGetCurrentTaskHandle()); // prevents arduino loop from being scheduled
+}
 
 ** Question 4:
 
@@ -95,4 +144,7 @@ Submit image to the separate Canvas submission link
 
 ** Question 5:
 
+Using the image, there is a section of the pin output that is high for a few hundred microseconds, then low for a few hundred more. We know that the high side is the gpio_on task running for 1000 cycles, and the low side is when taskYIELD is called and the gpio_off task runs for a while. Because gpio_off is an infinite loop, the next time that the output changes means that a slice has elapsed and the scheduler decided to move back to the gpio_on task. Theoretically, there is a small delay where the Arduino loop runs and deletes itself, but it doesn't show up on the scope because it doesn't affect the gpio. 
+
+Therefore, the time slice is between each rising edge, giving us a measurement of 1.000 ms, consistent with literature.
 
