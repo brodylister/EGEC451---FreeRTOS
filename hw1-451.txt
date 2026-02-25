@@ -1,0 +1,28 @@
+# Instructions:
+# 1. Type your response to each question below the question's heading;
+#    i.e., write question 1's response below "** Question 1:"
+# 2. Do not modify this template;
+#    this may result in your submission not being graded and a score of 0.
+# 3. Do not change the file type of this file; i.e., do not change to rich text,
+#    a Word document, PDF, etc.  You will submit this text file, as a .txt file,
+#    on Canvas for this homework assignment.
+
+** Question 1:
+The scheduler's time slice tick allows preemption to happen if a high priority task is ready to run.
+
+
+** Question 2:
+0 would not timeout at all.
+
+
+** Question 3:
+In the second argument of xQueueCreate().
+
+
+** Question 4:
+You would have to set wait_ticks to 0, so that the task never becomes blocked. 
+
+
+** Question 5:
+nullptr.
+
