@@ -1,0 +1,30 @@
+# Instructions:
+# 1. Type your response to each question below the question's heading;
+#    i.e., write question 1's response below "** Question 1:"
+# 2. Do not modify this template;
+#    this may result in your submission not being graded and a score of 0.
+# 3. Do not change the file type of this file; i.e., do not change to rich text,
+#    a Word document, PDF, etc.  You will submit this text file, as a .txt file,
+#    on Canvas for this homework assignment.
+
+** Question 1:
+In Listing 3-1 (debounce), there was only one producer and one consumer. The button would produce a debounced 1 or 0 representing the state and add it to the queue, and the LED would consume the state and maintain it until anything changed. For this, the button only waited 1ms if the queue was full. If it didn't have a state to contribute, it would yield. The LED would constantly consume states and block forever if the queue was empty. 
+
+In Listing 3-2 (press), there were two producers and one consumer. The buttons would each produce a positive or negative integer and add it to the queue if it was new or yield otherwise. They would wait 1ms if the queue was full. The LED, as the sole consumer, would constantly look for new states in the queue and read them, immediately deactivating the LED if either button was released.
+
+
+** Question 2:
+
+
+
+** Question 3:
+
+
+
+** Question 4:
+
+Submit image to the separate Canvas submission link
+
+** Question 5:
+
+
