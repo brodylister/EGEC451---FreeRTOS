@@ -97,7 +97,7 @@ void AlertLED::callback(TimerHandle_t th) {
 //
 // Global objects
 //
-static AlertLED alert1(GPIO_LED,1000);
+static AlertLED alert1(GPIO_LED,500);
 static unsigned loop_count = 0;
 
 //
