@@ -1,0 +1,113 @@
+# Instructions:
+# 1. Type your response to each question below the question's heading;
+#    i.e., write question 1's response below "** Question 1:"
+# 2. Do not modify this template;
+#    this may result in your submission not being graded and a score of 0.
+# 3. Do not change the file type of this file; i.e., do not change to rich text,
+#    a Word document, PDF, etc.  You will submit this text file, as a .txt file,
+#    on Canvas for this homework assignment.
+
+** Question 1:
+
+1)
+The Dining Philosopher's Problem:
+There are 4 Philosophers.
+Without deadlock prevention.
+00001: Philosopher 1 is Thinking
+00002: Philosopher 2 is Thinking
+00003: Philosopher 0 is Thinking
+00004: Philosopher 1 is Hungry
+00005: Philosopher 3 is Thinking
+00006: Philosopher 2 is Hungry
+00007: Philosopher 3 is Hungry
+00008: Philosopher 0 is Hungry
+
+2)
+The deadlock occurred after "00008", when all four philosophers were hungry and grabbed one fork, but were all unable to grab the second.
+
+3)
+The status of each philosopher is 'Hungry', because they all tried to grab a fork. However, none were able to change their state to 'Thinking', because after each tried to grab a fork, there were no longer any forks left for them to get a second, and we reached deadlock. 
+
+
+** Question 2:
+
+1)
+The Dining Philosopher's Problem:
+There are 4 Philosophers.
+With deadlock prevention.
+00001: Philosopher 1 is Thinking
+00002: Philosopher 2 is Thinking
+00003: Philosopher 0 is Thinking
+00004: Philosopher 1 is Hungry
+00005: Philosopher 3 is Thinking
+00006: Philosopher 2 is Hungry
+00007: Philosopher 3 is Hungry
+.
+.
+.
+02800: Philosopher 0 is Hungry
+02801: Philosopher 3 is Hungry
+02802: Philosopher 2 is Eating
+02803: Philosopher 1 is Eating
+02804: Philosopher 2 is Thinking
+02805: Philosopher 0 is Eating
+02806: Philosopher 1 is Thinking
+02807: Philosopher 0 is Thinking
+02808: Philosopher 3 is Eating
+02809: Philosopher 0 is Hungry
+02810: Philosopher 1 is Hungry
+02811: Philosopher 2 is Hungry
+02812: Philosopher 3 is Thinking
+etc.
+
+
+2)
+The PREVENT_DEADLOCK macro uses a series of if statements to implement a counting semaphore that prevents all philosophers from becoming hungry at the same time. 
+
+3)
+Each time a philosopher wants to become hungry, it first takes a lock from the "csem" semaphore before taking any locks for the forks. The semaphore only allows 3 locks to be taken, meaning all four philosophers cannot become hungry at the same time. Thus, they never all try to take one fork, and a deadlock never occurs. 
+
+
+** Question 3:
+I plan to have one non-reentrant "thinker" task, which will slowly swap two values back and forth, then go to sleep for a while. A second task, the "interrupter", will be modifying a temporary global variable constantly. The "thinker" will use the global variable to swap its two variables, and it should be visible when the data becomes modified unintentionally.
+
+pseudocode:
+
+global int temp;
+
+thinker()       [ non reentrant ]
+ take semaphore
+ set x to 2, y to 4
+ temp = x,
+ delay (critical, could interrupt)
+ x = y, y = temp
+ print x and y
+ give semaphore
+
+interruptor()
+ infinite loop setting temp to 100, 200, ...
+
+
+Printing x and y will show whether their values are successfully swapping back and forth, or if the corrupted data is being used from the interruptor. Both tasks will have a preprocessor directive controlling use of the semaphore macro. I won't print the temp variable to keep it readable.
+
+Expected output without semaphore:
+x is 2, y is 4
+x is 4, y is 2
+x is 2, y is 100
+...
+
+Expected output with semaphore:
+x is 2, y is 4
+x is 4, y is 2
+x is 2, y is 4
+...
+
+
+
+** Question 4:
+
+
+
+** Question 5:
+
+
