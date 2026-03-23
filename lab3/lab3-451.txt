@@ -109,5 +109,12 @@ x is 2, y is 4
 
 
 ** Question 5:
+Output without semaphore:
+
+...
+x is 2, y is 4
+x is 4, y is 200
+x is 200, y is 600
+...
 
 

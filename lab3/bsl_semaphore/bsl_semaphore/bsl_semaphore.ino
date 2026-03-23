@@ -41,13 +41,13 @@ x is 2, y is 4
 #define USE_SEMAPHORE 0
 
 static SemaphoreHandle_t sem;
-static int app_cpu = 0;
+static unsigned seed = 123456;
 
 BaseType_t global_variable;
 
 
 
-static void interrupterTask() {
+static void interrupterTask(void *argp) {
   BaseType_t x = 0;
   BaseType_t rc;
 
@@ -58,9 +58,9 @@ static void interrupterTask() {
   assert(rc == pdPASS);
 #endif
 
-    x = (x+100)%1000 + 100;     // 100, 200, ... 800, 900, 100, ...
+    x = (x+100)%1000 + 100;     // 100, 200, ... 800, 900, 1000, 100, ...
     global_variable = x;
-    delay(10);
+    delay(rand_r(&seed)%5 + 1);
 
 #if USE_SEMAPHORE
   rc = xSemaphoreGive(sem);
@@ -70,7 +70,7 @@ static void interrupterTask() {
   } 
 }
 
-static void thinkerTask() {
+static void thinkerTask(void *argp) {       // non-reentrant
   BaseType_t rc;
 
   for (;;) {
@@ -81,10 +81,16 @@ static void thinkerTask() {
 #endif
 
   int x = 2;
-  int y = 4;
-/*
-WIP
-*/
+  int y = 4;        // do this every time so we can see the changes
+
+  for (unsigned i = 0; i < 2; ++i ) {
+    print(x, y);
+    global_variable = x;
+    x = y;
+    delay(10);      // make interruption more likely
+    y = global_variable;
+  }
+  print(x, y);
 
 #if USE_SEMAPHORE
   rc = xSemaphoreGive(sem);
@@ -99,17 +105,58 @@ static void print(int x, int y) {
   printf("x is %u, y is %u\n",
   x,
   y);
-  /*
-  WIP
-  */
 }
 
 void setup() {
   // put your setup code here, to run once:
+  BaseType_t rc;
+  TaskHandle_t interrupter, thinker;
 
+  int app_cpu = xPortGetCoreID();
+  printf("2");
+  delay(1000);        // allow USB to connect
+
+#if USE_SEMAPHORE
+  printf("1");
+  sem = xSemaphoreCreateBinary();
+printf("1");
+  assert(sem);
+  printf("1");
+  rc = xSemaphoreGive(sem);
+  printf("1");
+  assert(rc == pdPASS);
+  printf("1");
+  assert(sem);
+  printf("Using Semaphore Protection.\n");
+#endif
+
+  rc = xTaskCreatePinnedToCore(
+    interrupterTask,
+    "interrupterTask",
+    5000,
+    nullptr,
+    1,
+    &interrupter,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(interrupter);
+
+
+  rc = xTaskCreatePinnedToCore(
+    thinkerTask,
+    "thinkerTask",
+    5000,
+    nullptr,
+    1,
+    &thinker,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(thinker);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  delay(1000);
 }
