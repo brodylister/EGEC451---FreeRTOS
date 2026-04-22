@@ -1,6 +1,7 @@
 // Brody Lister, California State University Fullerton
 // Demonstrate use of a locking semaphore
-
+// Dr. Mike Turi, EGEC451
+// March 27, 2026
 
 /*
 I plan to have one non-reentrant "thinker" task, which will slowly swap two values back and forth, then go to sleep for a while. A second task, the "interrupter", will be modifying a temporary global variable constantly. The "thinker" will use the global variable to swap its two variables, and it should be visible when the data becomes modified unintentionally.
