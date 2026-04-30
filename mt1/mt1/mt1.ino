@@ -25,7 +25,7 @@ QueueHandle_t queue;
 TimerHandle_t timer;
 TaskHandle_t task;
 bool startf = false;
-
+  
 // callback from timer every (wait)ms to check the button:
 void timer_cb_checkButton(TimerHandle_t timerHandle) {
   QueueHandle_t queue = *(QueueHandle_t*)pvTimerGetTimerID(timerHandle);

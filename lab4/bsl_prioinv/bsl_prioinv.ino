@@ -78,7 +78,7 @@ static void flickerLED(int pin) {
 }
 
 // **** TASKS
-static void red(void* argp) {
+static void redTask(void* argp) {
 
   printf("Red Task Initializing\n");
 
@@ -99,7 +99,7 @@ static void red(void* argp) {
   }
 }
 
-static void blue(void* argp) {
+static void blueTask(void* argp) {
 
   printf("Blue Task Initializing\n");
 
@@ -112,7 +112,7 @@ static void blue(void* argp) {
   }
 }
 
-static void green(void* argp) {
+static void greenTask(void* argp) {
 
   printf("Green Task Initializing\n");
   
@@ -158,8 +158,8 @@ void setup() {
 #endif
 
   rc = xTaskCreatePinnedToCore(
-    red,
-    "red",
+    redTask,
+    "redTask",
     2048,
     nullptr,
     1,
@@ -170,8 +170,8 @@ void setup() {
   assert(red);
 
   rc = xTaskCreatePinnedToCore(
-    green,
-    "green",
+    greenTask,
+    "greenTask",
     2048,
     nullptr,
     2,
@@ -182,8 +182,8 @@ void setup() {
   assert(green);
 
   rc = xTaskCreatePinnedToCore(
-    blue,
-    "blue",
+    blueTask,
+    "blueTask",
     2048,
     nullptr,
     3,
@@ -196,5 +196,5 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  delay(1000);
 }
