@@ -9,18 +9,424 @@
 
 ** Question 1:
 
+1)
+This program will involve 3 LEDs at different priorities, two of which (RED and BLUE) share a mutex to simulate a resource. There is a lock_ and unlock_resource() function for readability. While running, the tasks flicker the LED of their color using the flickerLED function.
+The priorities are as follows:
+3- BLUE
+2- GREEN
+1- RED
 
+Blue and Green start with a delay, so that the priority inversion is demonstrated. A mutex is used to have Red inherit the priority of Blue when it becomes unblocked.
+
+2)
+redTask priority 1, blueTask priority 3, greenTask priority 2.
+They run their respective LEDs.
+
+3)
+If priority inversion occurs, the red LED will flicker for a while, and then the green LED will flicker forever. This is because the blue LED is waiting on a resource held by red.
+If priority inheritance occurs, the first two steps will be the same, but then when blue unblocks, the red LED will preempt the running green LED so that it can finish using the resource, so there will be a short duration of red flickering. Then, when red is done, the blue LED will flicker forever.
 
 ** Question 2:
+// Brody Lister
+// CSU Fullerton
+// EGEC451 - Dr. Mike Turi
+// April 22, 2026
+// Demonstrate priority inversion and inheritance
+/*
 
+  Three tasks will run, Red, Blue, and Green. Red will have prio 1, Blue prio 3, and Green prio 2. 
+  The priority inversion situation looks like this:
+  
+  * Blue and Green are blocked.
+  * Red is running, and locks a binary semaphore.
+  * Before Red is done, Green unblocks and runs.
+  * Before Green is done, Blue unblocks, and tries to access the shared resource, but the semaphore is still locked.
+  * Since the resource is locked, Blue blocks, and Green resumes.
+  * Thus, priority inversion.
+
+  The solution involves a mutex and looks very similar:
+
+  * Blue and Green are blocked.
+  * Red is running, and locks a mutex.
+  * Before Red is done, Green unblocks and runs.
+  * Before Green is done, Blue unblocks, and tries to access the shared resource, but the mutex is locked.
+  * Since the mutex is locked, Red inherits the priority and runs until giving up the mutex.
+  * Since the mutex is now unlocked, Blue can run.
+  * Thus, no inversion.
+  
+  Each task will flash an LED of their color, on and off, every several milliseconds, while running. 
+  This allows us to see which task is currently running on a scope.
+
+  The delays between the tasks unblocking will be significant so that we can measure it in real time.
+
+*/
+
+
+#define RedPin 12
+#define BluePin 15
+#define GreenPin 13
+
+#define USE_MUTEX_INHERITANCE 0
+
+
+static int app_cpu = 0;
+static SemaphoreHandle_t mutex;
+
+
+// Lock resource
+static void lock_resource() {
+  BaseType_t rc;
+
+  rc = xSemaphoreTake(mutex, portMAX_DELAY);
+  assert(rc == pdPASS);
+
+  printf("Mutex Taken\n");
+}
+
+// Unlock resource
+static void unlock_resource() {
+  BaseType_t rc;
+
+  printf("Mutex Given\n");
+  rc = xSemaphoreGive(mutex);
+  assert(rc == pdPASS);
+}
+
+// flicker LED
+static void flickerLED(int pin) {
+  digitalWrite(pin,HIGH);
+  for (int i = 0; i < 3000000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
+
+  digitalWrite(pin,LOW);
+  for (int i = 0; i < 3000000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
+}
+
+// **** TASKS
+static void redTask(void* argp) {
+
+  printf("Red Task Initializing\n");
+
+  flickerLED(RedPin);
+  flickerLED(RedPin);
+  flickerLED(RedPin);
+
+  lock_resource();
+
+  for (int i = 0; i < 10; i++) {
+    flickerLED(RedPin);
+  }
+  unlock_resource();
+  while (true) {
+    flickerLED(RedPin);
+  }
+}
+
+static void blueTask(void* argp) {
+
+  printf("Blue Task Initializing\n");
+
+  delay(4000);
+  printf("Blue unblocked\n");
+  
+  lock_resource();
+
+  while (true) {
+    flickerLED(BluePin);
+  }
+}
+
+static void greenTask(void* argp) {
+
+  printf("Green Task Initializing\n");
+  
+  delay(2000);
+  printf("Green unblocked\n");
+
+  while (true) {
+    flickerLED(GreenPin);
+  }
+}
+
+void setup() { 
+  // put your setup code here, to run once:
+  app_cpu = xPortGetCoreID();
+  BaseType_t rc;
+  TaskHandle_t red, blue, green;
+
+  delay(1000);    // usb connect
+
+  pinMode(RedPin, OUTPUT);
+  digitalWrite(RedPin, LOW);
+  pinMode(GreenPin, OUTPUT);
+  digitalWrite(GreenPin, LOW);
+  pinMode(BluePin, OUTPUT);
+  digitalWrite(BluePin, LOW);
+
+#if USE_MUTEX_INHERITANCE
+  mutex = xSemaphoreCreateMutex();
+  assert(mutex);
+
+  printf("Using a mutex for priority inheritance.\n");
+#else 
+  mutex = xSemaphoreCreateBinary();
+  assert(mutex);
+  rc = xSemaphoreGive(mutex);
+  assert(rc == pdPASS);
+
+  printf("Using a semaphore without priority inheritance.\n");
+#endif
+
+  rc = xTaskCreatePinnedToCore(
+    redTask,
+    "redTask",
+    2048,
+    nullptr,
+    1,
+    &red,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(red);
+
+  rc = xTaskCreatePinnedToCore(
+    greenTask,
+    "greenTask",
+    2048,
+    nullptr,
+    2,
+    &green,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(green);
+
+  rc = xTaskCreatePinnedToCore(
+    blueTask,
+    "blueTask",
+    2048,
+    nullptr,
+    3,
+    &blue,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(blue);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  delay(1000);
+}
 
 
 ** Question 3:
 
 In addition to your response, you must also upload an image to Canvas.
 
+It worked correctly, after much troubleshooting. The LEDs flicker in the correct order, and it is apparent through the oscilloscope image.
+
+(I have measured the voltage of one LED, and they all share a resistor, so all three are visible drawing current on the same probe. I've colorized it after for clarity)
 
 ** Question 4:
+
+// Brody Lister
+// CSU Fullerton
+// EGEC451 - Dr. Mike Turi
+// April 22, 2026
+// Demonstrate priority inversion and inheritance
+/*
+
+  Three tasks will run, Red, Blue, and Green. Red will have prio 1, Blue prio 3, and Green prio 2. 
+  The priority inversion situation looks like this:
+  
+  * Blue and Green are blocked.
+  * Red is running, and locks a binary semaphore.
+  * Before Red is done, Green unblocks and runs.
+  * Before Green is done, Blue unblocks, and tries to access the shared resource, but the semaphore is still locked.
+  * Since the resource is locked, Blue blocks, and Green resumes.
+  * Thus, priority inversion.
+
+  The solution involves a mutex and looks very similar:
+
+  * Blue and Green are blocked.
+  * Red is running, and locks a mutex.
+  * Before Red is done, Green unblocks and runs.
+  * Before Green is done, Blue unblocks, and tries to access the shared resource, but the mutex is locked.
+  * Since the mutex is locked, Red inherits the priority and runs until giving up the mutex.
+  * Since the mutex is now unlocked, Blue can run.
+  * Thus, no inversion.
+  
+  Each task will flash an LED of their color, on and off, every several milliseconds, while running. 
+  This allows us to see which task is currently running on a scope.
+
+  The delays between the tasks unblocking will be significant so that we can measure it in real time.
+
+*/
+
+
+#define RedPin 12
+#define BluePin 15
+#define GreenPin 13
+
+#define USE_MUTEX_INHERITANCE 1   // **change to 1**
+
+
+static int app_cpu = 0;
+static SemaphoreHandle_t mutex;
+
+
+// Lock resource
+static void lock_resource() {
+  BaseType_t rc;
+
+  rc = xSemaphoreTake(mutex, portMAX_DELAY);
+  assert(rc == pdPASS);
+
+  printf("Mutex Taken\n");
+}
+
+// Unlock resource
+static void unlock_resource() {
+  BaseType_t rc;
+
+  printf("Mutex Given\n");
+  rc = xSemaphoreGive(mutex);
+  assert(rc == pdPASS);
+}
+
+// flicker LED
+static void flickerLED(int pin) {
+  digitalWrite(pin,HIGH);
+  for (int i = 0; i < 3000000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
+
+  digitalWrite(pin,LOW);
+  for (int i = 0; i < 3000000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
+}
+
+// **** TASKS
+static void redTask(void* argp) {
+
+  printf("Red Task Initializing\n");
+
+  flickerLED(RedPin);
+  flickerLED(RedPin);
+  flickerLED(RedPin);
+
+  lock_resource();
+
+  for (int i = 0; i < 10; i++) {
+    flickerLED(RedPin);
+  }
+  unlock_resource();
+  while (true) {
+    flickerLED(RedPin);
+  }
+}
+
+static void blueTask(void* argp) {
+
+  printf("Blue Task Initializing\n");
+
+  delay(4000);
+  printf("Blue unblocked\n");
+  
+  lock_resource();
+
+  while (true) {
+    flickerLED(BluePin);
+  }
+}
+
+static void greenTask(void* argp) {
+
+  printf("Green Task Initializing\n");
+  
+  delay(2000);
+  printf("Green unblocked\n");
+
+  while (true) {
+    flickerLED(GreenPin);
+  }
+}
+
+void setup() { 
+  // put your setup code here, to run once:
+  app_cpu = xPortGetCoreID();
+  BaseType_t rc;
+  TaskHandle_t red, blue, green;
+
+  delay(1000);    // usb connect
+
+  pinMode(RedPin, OUTPUT);
+  digitalWrite(RedPin, LOW);
+  pinMode(GreenPin, OUTPUT);
+  digitalWrite(GreenPin, LOW);
+  pinMode(BluePin, OUTPUT);
+  digitalWrite(BluePin, LOW);
+
+#if USE_MUTEX_INHERITANCE
+  mutex = xSemaphoreCreateMutex();
+  assert(mutex);
+
+  printf("Using a mutex for priority inheritance.\n");
+#else 
+  mutex = xSemaphoreCreateBinary();
+  assert(mutex);
+  rc = xSemaphoreGive(mutex);
+  assert(rc == pdPASS);
+
+  printf("Using a semaphore without priority inheritance.\n");
+#endif
+
+  rc = xTaskCreatePinnedToCore(
+    redTask,
+    "redTask",
+    2048,
+    nullptr,
+    1,
+    &red,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(red);
+
+  rc = xTaskCreatePinnedToCore(
+    greenTask,
+    "greenTask",
+    2048,
+    nullptr,
+    2,
+    &green,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(green);
+
+  rc = xTaskCreatePinnedToCore(
+    blueTask,
+    "blueTask",
+    2048,
+    nullptr,
+    3,
+    &blue,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+  assert(blue);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  delay(1000);
+}
 
 
 
@@ -28,3 +434,8 @@ In addition to your response, you must also upload an image to Canvas.
 
 In addition to your response, you must also upload an image to Canvas.
 
+I designed the code originally to use a preprocessor command, visible as 
+#define USE_MUTEX_INHERITANCE
+with a value of 1 for mutex and 0 for semaphore. This uses the same handle, but replaces the underlying data structure with a FreeRTOS mutex so that it can priority inherit. Everything else is the same.
+
+The program works as expected. This time, after a while of the green LED flickering, red flickers to unlock the resource, after which blue flickers indefinitely.

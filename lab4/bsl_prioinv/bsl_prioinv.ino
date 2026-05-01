@@ -25,7 +25,7 @@
   * Since the mutex is now unlocked, Blue can run.
   * Thus, no inversion.
   
-  Each task will flash an LED of their color, on and off, every millisecond, while running. 
+  Each task will flash an LED of their color, on and off, every several milliseconds, while running. 
   This allows us to see which task is currently running on a scope.
 
   The delays between the tasks unblocking will be significant so that we can measure it in real time.
@@ -34,8 +34,8 @@
 
 
 #define RedPin 12
-#define BluePin 13
-#define GreenPin 15
+#define BluePin 15
+#define GreenPin 13
 
 #define USE_MUTEX_INHERITANCE 0
 
@@ -58,22 +58,21 @@ static void lock_resource() {
 static void unlock_resource() {
   BaseType_t rc;
 
+  printf("Mutex Given\n");
   rc = xSemaphoreGive(mutex);
   assert(rc == pdPASS);
-
-  printf("Mutex Given\n");
 }
 
 // flicker LED
 static void flickerLED(int pin) {
   digitalWrite(pin,HIGH);
-  for (int i = 0; ++i; i < 40000) {
+  for (int i = 0; i < 3000000; i++) {
     __asm__ __volatile__ ("nop");
   }
 
   digitalWrite(pin,LOW);
-  for (int i = 0; ++i; i < 40000) {
-  __asm__ __volatile__ ("nop");
+  for (int i = 0; i < 3000000; i++) {
+    __asm__ __volatile__ ("nop");
   }
 }
 
@@ -88,12 +87,10 @@ static void redTask(void* argp) {
 
   lock_resource();
 
-  for (int i = 0; ++i; i < 10) {
+  for (int i = 0; i < 10; i++) {
     flickerLED(RedPin);
   }
-  
   unlock_resource();
-
   while (true) {
     flickerLED(RedPin);
   }
@@ -103,7 +100,8 @@ static void blueTask(void* argp) {
 
   printf("Blue Task Initializing\n");
 
-  delay(40);
+  delay(4000);
+  printf("Blue unblocked\n");
   
   lock_resource();
 
@@ -116,17 +114,13 @@ static void greenTask(void* argp) {
 
   printf("Green Task Initializing\n");
   
-  delay(20);
-  
+  delay(2000);
+  printf("Green unblocked\n");
+
   while (true) {
     flickerLED(GreenPin);
   }
 }
-
-static void mgr(void* argp) {
-
-}
-
 
 void setup() { 
   // put your setup code here, to run once:
