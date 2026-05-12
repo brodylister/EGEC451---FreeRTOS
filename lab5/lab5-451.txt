@@ -1,0 +1,191 @@
+# Instructions:
+# 1. Type your response to each question below the question's heading;
+#    i.e., write question 1's response below "** Question 1:"
+# 2. Do not modify this template;
+#    this may result in your submission not being graded and a score of 0.
+# 3. Do not change the file type of this file; i.e., do not change to rich text,
+#    a Word document, PDF, etc.  You will submit this text file, as a .txt file,
+#    on Canvas for this homework assignment.
+
+** Question 1:
+
+This program will use a the Arduino hardware timer macro "micros()" to measure the interface latency
+  of an interrupt handler. Two pins will be wired together on the ESP32. A timer will routinely set the
+  wire high to simulate the signal to be measured (recording its time with micros()). An ISR will be 
+  attached to the rising edge of that pin to send a task notification to a task to record the time that  
+  the input was measured (with micros()), and subtract the start and end time and then send it to the 
+  serial monitor.
+
+
+** Question 2:
+
+
+#define GPIO_WIRE_START 12
+#define GPIO_WIRE_END 15
+#define EXPERIMENT_INTERVAL_MS 1000 // delay between sending interrupt signals
+
+volatile uint32_t start_time;
+volatile uint32_t end_time;
+TimerHandle_t timerh;
+TaskHandle_t taskh;
+static StaticTimer_t timer_obj;
+int app_cpu;
+
+bool startf = false;
+
+
+void IRAM_ATTR isr() {
+  vTaskNotifyGiveFromISR(taskh, nullptr);
+}
+
+void timer_callback(TimerHandle_t timerh) {
+  start_time = micros();
+  digitalWrite(GPIO_WIRE_START, HIGH);
+  digitalWrite(GPIO_WIRE_START, LOW);
+}
+
+void measure_task_func(void* argp) {
+  while (true) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    end_time = micros();
+    auto latency = end_time - start_time;
+    printf("Latency: %d\n", latency);
+  }
+}
+
+void setup() {
+  app_cpu = xPortGetCoreID();
+
+  delay(1000);  // allow USB to connect
+
+  pinMode(GPIO_WIRE_START, OUTPUT);
+  pinMode(GPIO_WIRE_END, INPUT_PULLDOWN);
+  attachInterrupt(GPIO_WIRE_END, isr, RISING);
+
+  BaseType_t rc;
+
+  rc = xTaskCreatePinnedToCore(
+    measure_task_func,
+    "measure_task",
+    2048,
+    nullptr,
+    1,
+    &taskh,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+
+  timerh = xTimerCreateStatic(
+    "timer",
+    pdMS_TO_TICKS(EXPERIMENT_INTERVAL_MS),
+    pdTRUE,
+    nullptr,  //?
+    timer_callback,
+    &timer_obj
+  );
+  rc = xTimerStart(timerh, portMAX_DELAY);
+  assert(rc == pdPASS);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  vTaskDelete(nullptr);
+}
+
+
+** Question 3:
+
+This program will use a very similar setup to the last problem, but rather than have an interrupt attached to the rising edge of the signal, the task will poll the state of the wire in a loop.
+
+** Question 4:
+
+#define GPIO_WIRE_START 12
+#define GPIO_WIRE_END 15
+#define EXPERIMENT_INTERVAL_MS 1000 // delay between sending signals
+
+volatile uint32_t start_time;
+volatile uint32_t end_time;
+TimerHandle_t timerh;
+TaskHandle_t taskh;
+static StaticTimer_t timer_obj;
+int app_cpu;
+
+bool startf = false;
+
+void timer_callback(TimerHandle_t timerh) {
+  start_time = micros();
+  digitalWrite(GPIO_WIRE_START, HIGH);
+  for (int i = 0; i < 40000; i++) {
+    __asm__ __volatile__ ("nop");
+  }
+  digitalWrite(GPIO_WIRE_START, LOW);
+}
+
+void measure_task_func(void* argp) {
+  while (true) {
+    int read = digitalRead(GPIO_WIRE_END);
+    if (read == 1) {
+      end_time = micros();
+      auto latency = end_time - start_time;
+      printf("Latency: %d\n", latency);
+      for (int i = 0; i < 40000; i++) {
+        __asm__ __volatile__ ("nop");
+      }
+    }
+  }
+}
+
+void setup() {
+  app_cpu = xPortGetCoreID();
+
+  delay(1000);  // allow USB to connect
+
+  pinMode(GPIO_WIRE_START, OUTPUT);
+  pinMode(GPIO_WIRE_END, INPUT_PULLDOWN);
+
+  BaseType_t rc;
+
+  rc = xTaskCreatePinnedToCore(
+    measure_task_func,
+    "measure_task",
+    2048,
+    nullptr,
+    1,
+    &taskh,
+    app_cpu
+  );
+  assert(rc == pdPASS);
+
+  timerh = xTimerCreateStatic(
+    "timer",
+    pdMS_TO_TICKS(EXPERIMENT_INTERVAL_MS),
+    pdTRUE,
+    nullptr,  //?
+    timer_callback,
+    &timer_obj
+  );
+  rc = xTimerStart(timerh, portMAX_DELAY);
+  assert(rc == pdPASS);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  vTaskDelete(nullptr);
+}
+
+
+** Question 5:
+
+Both programs work correctly. I attached an LED to the wire to see the quick pulse of the signal. On the serial monitor, both programs output a latency measurement every second.
+
+** Question 6:
+
+The average latency was very easy, since both versions of the program output the exact same measurement every time. For the interrupt, every interrupt was recorded 146 microseconds after the wire went high, except for the first time after starting the program, which took 144 microseconds. For the busy-wait version, every interrupt was recorded just one microsecond after the wire went high.
+
+This was very surprising. I know they are accurate because I had to put in a delay in the polling cycle speed so that, even though the wire was only high for 40000 "nop" instructions, the input was being measured 11 times in that interval. After putting in the delay, it only measured the flash once, and it was around 1 microsecond after the change actually happened.
+
+Technically, the busy wait would be much faster in a system where that delay matters. However, I imagine it is much more difficult to implement. This version was only so fast because the CPU was doing literally nothing but constantly checking if the input had changed. Other systems would require a longer delay between polls. However, if you could guarantee that that delay was less than 146 us, then it might be more efficient to try and make busy/wait work. 
+
+
